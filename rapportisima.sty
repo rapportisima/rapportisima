@@ -1,0 +1,748 @@
+%%------------------------------------------------%%
+%% Package LaTeX pour les rapports de l'ISIMA     %%
+%%------------------------------------------------%%
+%% Creation: Quentin Lequy 21/07/2005             %%
+%%                                                %%
+%% Remerciements pour le codage :                 %%
+%%   Romain Gaucher, Frederic Metrich             %%
+%%                                                %%
+%% Remerciements pour le design :                 %%
+%%   Violette Moulin, Lorine Pornet               %%
+%%------------------------------------------------%%
+
+%%%%%%%%%%%%%%%%%%informations du package%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ProvidesPackage{rapportisima}[2005/06/09]
+\newif\if@doubletome \@doubletomefalse
+\newif\if@logoentete \@logoentetefalse
+\newif\if@partieentete \@partieentetefalse
+\newif\if@vectoriel \@vectorielfalse
+\newif\if@tun \@tunfalse
+\newif\if@nofigures \@nofiguresfalse
+\newif\if@notables \@notablesfalse
+\newif\if@fusionfigtab \@fusionfigtabfalse
+\newif\if@partiebigpage \@partiebigpagefalse
+\DeclareOption{doubletome}{ \@doubletometrue } %permet d'avoir deux tomes dont un d'annexes
+\DeclareOption{logoentete}{ \@logoentetetrue } %permet d'avoir les logos dans l'entete
+\DeclareOption{lmodern}{ \@vectorieltrue}  %permet d'avoir des polices vectorielles
+\DeclareOption{t1}{ \@tuntrue}  %permet d'avoir des polices vectorielles
+\DeclareOption{partieentete}{\@partieentetetrue} %permet d'avoir le nom de la partie dans l'entete
+\DeclareOption{nEUrOOstyle}{\@vectorieltrue \@partieentetetrue} %clin d'oeil
+\DeclareOption{nofigures}{ \@nofigurestrue }  %pas de tables des figure
+\DeclareOption{notables}{ \@notablestrue }    %pas de liste des tables
+\DeclareOption{fusionfigtab}{ \@fusionfigtabtrue \@nofigurestrue \@notablestrue}    %liste des tables et des figures sur une page
+\DeclareOption{partiebigpage}{ \@partiebigpagetrue } %titre de la partie sur un page
+\ProcessOptions
+
+%%%%%%%%%%%%%%%%%%inclusion des packages necessaires%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{color}    %pour imprimer des rapports en couleur
+\usepackage{graphicx} %pour insérer des images en une ligne
+\usepackage{listings} %pour créer des listings de code
+\usepackage{fancyhdr} %pour le style des pages (head + foot)
+\usepackage{epsfig}   %pour insérer des images en eps
+\input{epsf}
+\usepackage{rawfonts} %pour avoir plus de fonts
+\usepackage{makeidx}  %pour faire des indexs
+\usepackage{comment}
+\if@vectoriel
+  \usepackage{lmodern}
+\fi
+\if@tun
+  \usepackage[T1]{fontenc}
+\fi
+
+\setlength{\hoffset}{0.5cm}       % Décalage horizontal de l'ensemble
+\setlength{\oddsidemargin}{0pt} 	% Marge gauche sur pages impaires
+\setlength{\evensidemargin}{0pt} 	% Marge gauche sur pages paires
+\setlength{\marginparwidth}{0pt} % Largeur de note dans la marge
+\setlength{\textwidth}{516pt} 	  % Largeur de la zone de texte
+\setlength{\voffset}{0cm} 	    % Décalage vertical de l'ensemble
+\setlength{\marginparsep}{0.5cm} 	  % Séparation de la marge
+\setlength{\topmargin}{0pt} 	    % Pas de marge en haut
+\setlength{\headheight}{0pt} 	    % Haut de page
+\setlength{\headsep}{0pt} 	      % Entre le haut de page et le texte
+\setlength{\footskip}{27pt} 	    % Bas de page + séparation
+\setlength{\textheight}{28cm}   % Hauteur de la zone de texte
+
+\selectlanguage{french}  %selection de la langue francaise pour les tables
+
+%----------------------
+% Definitions gloables     
+%----------------------
+
+\newcounter{nbannexe}
+\newcounter{nbsubannexe}
+\newcounter{nbtome}
+\newif\if@footsubjectexist
+\@footsubjectexistfalse
+
+%%%% page de garde %%%%
+
+%auteur
+\gdef\@author{}
+\gdef\author#1{\gdef\@author{#1}}
+
+%adresse de l'entreprise + logo de l'ISIMA + logo de l'entreprise
+\gdef\@adresse{}
+\gdef\adresse#1{\gdef\@adresse{#1}}
+\gdef\@logoISIMA{}
+\gdef\logoISIMA#1{\gdef\@logoISIMA{#1}}
+\gdef\@sizelogoISIMA{}
+\gdef\sizelogoISIMA#1{\gdef\@sizelogoISIMA{#1}}
+\gdef\@logo{}
+\gdef\logo#1{\gdef\@logo{#1}}
+\gdef\@sizelogo{}
+\gdef\sizelogo#1{\gdef\@sizelogo{#1}}
+
+\gdef\@putlogo{ \includegraphics[width=4cm,height=2cm]{\@logo} }
+\gdef\sizelogo#1{ \gdef\@putlogo{ \includegraphics[#1]{\@logo}}}
+
+\gdef\@putlogoISIMA{ \includegraphics[width=4cm,height=2cm]{\@logoISIMA} }
+\gdef\sizelogoISIMA#1{ \gdef\@putlogoISIMA{ \includegraphics[#1]{\@logoISIMA}}}
+
+\gdef\@sizeofaddressISIMA{0.5465\textwidth}
+\gdef\sizeofaddressISIMA#1{\gdef\@sizeofaddressISIMA{#1}}
+\gdef\@sizeofaddress{0.3721\textwidth}
+\gdef\sizeofaddress#1{\gdef\@sizeofaddress{#1}}
+
+
+%type de rapport + sujet de stage + image
+\gdef\@title{}
+\gdef\title#1{\gdef\@title{#1}}
+\gdef\@subject{}
+\gdef\subject#1{\gdef\@subject{#1}}
+\gdef\@image{}
+\gdef\image#1{\gdef\@image{#1}}
+
+
+%espacement
+\gdef\@espaceenhaut{}     %haut de la page de garde
+\gdef\espaceenhaut#1{\gdef\@espaceenhaut{#1}}
+\gdef\@espaceadressetitre{} %entre le bloc d'adresse et le titre
+\gdef\espaceadressetitre#1{\gdef\@espaceadressetitre{#1}}
+\gdef\@espaceimageresp{}  %entre bloc image/sujet et les responsables
+\gdef\espaceimageresp#1{\gdef\@espaceimageresp{#1}}
+\gdef\@espacedate{}     %entre le haut de la liste des responsables et la date
+\gdef\espacedate#1{\gdef\@espacedate{#1}}
+
+\def\spacebeforeaddresses#1
+{\espaceenhaut{\vskip #1}}
+\def\spacebeforetitle#1
+{\espaceadressetitre{\vskip #1}}
+\def\spacebeforenames#1
+{\espaceimageresp{\vskip #1}}
+\def\spacebeforedate#1
+{\espacedate{\vskip #1}}
+
+%liste des responsables
+\gdef\@respa{}
+\gdef\respa#1#2{ \gdef\@respa{#1 & #2 \\ } }
+\gdef\@respb{}
+\gdef\respb#1#2{ \gdef\@respb{#1 & #2 \\ } }
+\gdef\@respc{}                
+\gdef\respc#1#2{ \gdef\@respc{#1 & #2 \\} }
+\gdef\@respd{}
+\gdef\respd#1#2{ \gdef\@respd{#1 & #2 \\ } }
+\gdef\@respe{}
+\gdef\respe#1#2{ \gdef\@respe{#1 & #2 \\ } }
+\gdef\@respf{}
+\gdef\respf#1#2{ \gdef\@respf{#1 & #2 \\ } }
+
+%rédacteur et date
+\gdef\@presentepar{}
+\gdef\presentepar#1{\gdef\@presentepar{Pr\'esent\'e par : #1 \\}}
+\gdef\@duree{}
+\gdef\duree#1{\gdef\@duree{#1}}
+\gdef\@years{}
+\gdef\years#1{\gdef\@years{#1}}
+
+\gdef\@sizeofresp{0.666\textwidth}
+\gdef\sizeofresp#1{\gdef\@sizeofresp{#1}}
+\gdef\@sizeofpresent{0.333\textwidth}
+\gdef\sizeofpresent#1{\gdef\@sizeofpresent{#1}}
+
+
+%%%% preambule %%%%
+
+%remerciement, resume, abstract
+\gdef\@thanks{}
+\gdef\thanks#1
+{%
+  \gdef\@thanks
+  {%
+  	\newpage%
+		\subsection*{\LARGE{\sc{Remerciements}}} \vskip 12pt%
+		\addtocontents{toc}{\protect\contentsline{section}{\sc Remerciements}{}{}}#1%
+  }
+}
+
+%resume
+\gdef\@resume{}
+\gdef\resume#1{\gdef\@resume{#1}}
+\gdef\@motscles{}
+\gdef\motscles#1{\gdef\@motscles{#1}}
+
+%abstract
+\gdef\@abstract{}
+\gdef\abstract#1{\gdef\@abstract{#1}}
+\gdef\@keywords{}
+\gdef\keywords#1{\gdef\@keywords{#1}}
+
+%glossaire
+\gdef\@glossaire{}
+\gdef\glossaire#1
+{%
+  \gdef\@glossaire
+  {%
+		\newpage%
+		\subsection*{\LARGE{\sc{Glossaire}}} \vskip 12pt%
+    \addtocontents{toc}{\protect\contentsline{section}{\sc Glossaire}{}{}}#1%
+  }
+}
+
+%glossaire
+\gdef\@abrev{}
+\gdef\listeabreviations#1
+{%
+  \gdef\@abrev
+  {%
+		\newpage%
+		\subsection*{\LARGE{\sc{Liste des abréviations}}} \vskip 12pt%
+    \addtocontents{toc}{\protect\contentsline{section}{\sc Liste des abréviations}{}{}}#1%
+  }
+}
+
+%ordre personnalisé
+\gdef\@ordredebut{}
+\gdef\ordredebut#1{\gdef\@ordredebut{#1}}
+
+\gdef\@espaceabstract{}   %
+\gdef\espaceabstract#1{\gdef\@espaceabstract{#1}}
+\def\spacebeforeabstract#1
+{\espaceabstract{\vskip #1}}
+
+%%%% mise en page generale %%%%
+
+%header
+\gdef\@headleft{}
+\gdef\headleft#1{\gdef\@headleft{#1}}
+\gdef\@headright{}
+\gdef\headright#1{\gdef\@headright{#1}}
+
+%footer
+\gdef\@footdate{}
+\gdef\footdate#1{\gdef\@footdate{#1}}
+\gdef\@footsubject{}
+\gdef\footsubject#1{\@footsubjectexisttrue \gdef\@footsubject{#1}}
+
+%---------------------------------
+% Definition de la page de garde
+%---------------------------------
+
+\gdef\zonedetitre#1
+{
+  \begin{center}
+    \Large \@title \\
+    \rule{\textwidth}{0.3mm} \\
+    \huge \bfseries #1
+    \rule{\textwidth}{0.3mm} \\
+    \if@doubletome
+  	  \large{(TOME \Roman{nbtome})}\\
+    \fi
+  \end{center}
+}
+
+\def\makeguard#1
+{
+  \thispagestyle{empty}
+  \let\footnotesize\small
+  \let\footnoterule\relax
+  \reset@font
+  \null
+  %\@espaceenhaut
+
+  %%%% Zone des adresses %%%%
+  \begin{tabular}[t]{p{\@sizeofaddressISIMA}p{\@sizeofaddress}}
+    \vspace*{-4em}  %on colle la box en haut
+    \hspace*{-4em}  % et a gauche
+    \makebox[\@sizeofaddressISIMA][l]
+    {
+      %adresse ISIMA
+      \begin{tabular}[t]{c}
+        %logo
+        \@putlogoISIMA \\
+        %nom
+        {\bf I}nstitut {\bf S}up\'erieur d' {\bf I}nformatique, \\
+        de {\bf M}od\'elisation et de leurs {\bf A}pplications\\
+        [1ex]
+        %adresse
+        Complexe Universitaire des C\'ezeaux  \\
+        BP125                                 \\
+        63173 Aubi\`ere CEDEX                 \\     
+         \end{tabular}
+    }    &
+    \vspace*{-4em} %on colle la box de l'entreprise en haut
+    \hspace*{-4em} % et a gauche
+    \vbox
+    {
+      %adresse entreprise
+      \begin{tabular}[t]{c}
+      \@putlogo\\
+      \@adresse
+      \end{tabular}
+      \vskip 1pt %force ...
+    } \\
+  \end{tabular}
+
+  \@espaceadressetitre
+
+  %%%% zone de titre %%%%
+  \zonedetitre{#1}
+
+  %%%% image optionelle en dessous du titre %%%%
+  \begin{center}
+    \@image
+  \end{center}
+
+  \@espaceimageresp
+
+  %%%% zone des responsable %%%%
+  \begin{tabular}[t]{p{\@sizeofresp}p{\@sizeofpresent}}
+    \vspace*{0.6em} % on colle la box en haut
+    \hspace*{-2em} % et a gauche
+    %liste des responsables
+    \vbox
+    {
+        \begin{tabular}[t]{ll}
+        \@respa
+        \@respb
+        \@respc
+        \@respe
+		    \@respd
+        \@respf
+        \end{tabular}
+      
+      \vskip 0pt %force latex a utilise la vbox
+    }
+    \vspace*{-5ex} %on colle en bas
+    &
+    \vspace*{-2ex} %on colle en haut
+    \hspace*{-2ex} % et a droite
+    \vbox
+    {
+      \@espacedate
+      %bolc date + "presente par"(optionnel)
+      \begin{tabular}[t]{p{\@sizeofpresent}}
+      \@presentepar
+      \@years \\
+      \@duree
+      \end{tabular}
+      \vskip 0cm %force latex a utilise la vbox
+    } \vspace*{-5ex} \\
+  \end{tabular}
+  \null
+  %%%% fin de la premiere page de garde %%%
+}
+
+%fonction creeant une pages de garde
+\def\maketitle
+{
+  %\if@doubletome
+  %  \setcounter{nbtome}{1}
+  %\fi
+
+
+  %-----------------------
+  %  double page de garde
+  %-----------------------
+  \begin{titlepage}%
+
+    \makeguard{\@subject}
+
+    %\setcounter{page}{0} %la numerotation des pages du rapport commence ici
+    %\clearpage
+    %\newpage
+     \if@partieentete
+       \addtolength{\textheight}{-12pt}%
+     \fi
+
+    %\makeguard{\@subject}
+
+  \end{titlepage}%
+  \setcounter{footnote}{0}%
+  
+  \if@logoentete
+      \addtolength{\textheight}{-20pt}%
+  \fi
+  
+
+	%\let\maketitle\relax% fin de la fonction
+
+  %%%% redefinition de la mise en page %%%%
+  \setlength{\voffset}{-18pt} 	  % Bon pour DOS
+	\setlength{\headheight}{20pt} 	% Haut de page
+	\setlength{\headsep}{40pt} 	    % Entre le haut de page et le texte
+	\setlength{\footskip}{20pt} 	  % Bas de page + séparation
+	
+}
+
+%-------------------------------------
+% Definition des parties du préambule
+%-------------------------------------
+
+\gdef\@resumeabstract
+{
+	\newpage
+	\subsection*{ \LARGE{\sc{R\'esum\'e}}}
+	\addtocontents{toc}{\protect\contentsline{section}{\sc R\'esum\'e / Abstract}{}{}}
+	\vskip 12pt
+	\@resume
+	\vskip 12pt
+	\textbf{Mots cl\'es:} \@motscles
+	\vskip 24pt
+	\@espaceabstract
+ 	\subsection*{ \LARGE{\sc{Abstract}} }
+	\vskip 12pt
+	\@abstract
+	\vskip 12pt
+	\textbf{Keywords:} \@keywords
+}
+
+\gdef\@tablematieres
+{
+	\clearpage
+	  \setcounter{page}{1}  
+	\rfoot{page {\thepage} / \pageref{LastPage}}
+	\setcounter{secnumdepth}{4} % profondeur de la numerotation
+	\setcounter{tocdepth}{3}    % profondeur de la table des matières
+  \sloppy                     % justification moins exigente
+	\tableofcontents            % tables des matieres
+  \addtocontents{toc}{\protect\contentsline{section}{\sc Table des mati\`eres}{}{}}
+  \rfoot{page {\thepage} / \pageref{LastPage}}
+   
+}
+
+\gdef\@listefigtab
+{
+		%%%% table des figures %%%%
+    \if@nofigures \else
+  		\clearpage
+      \listoffigures
+      \addtocontents{toc}{\protect\contentsline{section}{\sc Table des figures}{}{}}
+    \fi
+
+		%%%% liste des tables %%%%
+    \if@notables \else
+  		\clearpage
+      \listoftables
+      \addtocontents{toc}{\protect\contentsline{section}{\sc Liste des tableaux}{}{}}
+    \fi
+
+    \if@fusionfigtab
+  		\clearpage
+      \listoffigures
+      \addtocontents{toc}{\protect\contentsline{section}{\sc Tables des figures et liste des tableaux}{}{}}
+      \listoftables
+    \fi
+}
+
+
+%---------------------------------
+% Definition du préambule              
+%---------------------------------
+
+\newcommand{\makebeginning}[1][A]
+{
+    \pagestyle{fancy}        % pour avoir l'entete et le pied de page
+		\selectlanguage{french}  % pour avoir les titres en francais
+
+		%entete
+		\if@logoentete
+			\addtolength{\voffset}{-20pt}
+		  \addtolength{\headheight}{+40pt}%
+      \lhead{\includegraphics[width=80pt,height=40pt]{\@logoISIMA}}%
+      \rhead{\includegraphics[width=80pt,height=40pt]{\@logo}}%
+    \else
+		  %\renewcommand{\sectionmark}[1]{\markleft{\thesection.\ #1}}
+		  %\fancyhead[LH]{\leftmark}
+		  %\fancyhead[RH]{\rightmark}
+		  \lhead{\@headleft}%
+		  \rhead{\@headright}
+		\fi
+		\chead{%
+      \if@partieentete
+        {\small \@author}, {\small \@title}
+        \else
+        \@ifundefined{footsubjectexist}{\small \@subject}{\small \@footsubject}
+      \fi
+    }%
+
+		%pied de page
+    \lfoot{\@footdate}
+		\cfoot{%
+      \if@partieentete
+        \if@footsubjectexist
+           \small \@footsubject
+        \else
+           \small \@subject
+        \fi
+      \fi
+    }
+		\rfoot{}
+
+		\if #1A
+      %%%% remerciement %%%%
+  		\@thanks
+  		%%%% resume/abstract %%%%
+      \@resumeabstract
+  		%%%% Table des matieres %%%%
+      \@tablematieres
+  		%%%% Liste des figures %%%%
+  		\@listefigtab
+  		%%%% Glossaire %%%%
+  		\@glossaire
+  		%%%% Liste des abreviations %%%%
+      \@abrev
+    \fi
+		
+    \if #1B
+      %%%% remerciement %%%%
+  		\@thanks
+  		%%%% resume/abstract %%%%
+      \@resumeabstract
+  		%%%% Glossaire %%%%
+  		\@glossaire
+  		%%%% Liste des abreviations %%%%
+      \@abrev
+  		%%%% Table des matieres %%%%
+      \@tablematieres
+  		%%%% Liste des figures %%%%
+  		\@listefigtab
+    \fi
+    
+    \if #1C
+      %%%% remerciement %%%%
+  		\@thanks
+  		%%%% Glossaire %%%%
+  		\@glossaire
+  		%%%% Liste des abreviations %%%%
+      \@abrev
+  		%%%% Liste des figures %%%%
+  		\@listefigtab
+  		%%%% resume/abstract %%%%
+      \@resumeabstract
+  		%%%% Table des matieres %%%%
+      \@tablematieres
+    \fi
+
+    \if #10
+      \@ordredebut
+    \fi
+
+    \clearpage
+
+		% numerotation de bas de page
+    \rfoot{page {\thepage} / \pageref{LastPage}}
+
+}
+
+\def\intro
+{
+	\subsection *{\LARGE {\sc Introduction} }
+	\addcontentsline{toc}{section}{\sc Introduction}
+	\vskip 12pt
+	
+}
+
+\def\conclusion
+{
+	\chead{%
+  \if@partieentete
+    {\small \@author}, {\small \@title}
+  \fi}
+  \subsection *{\LARGE {\sc Conclusion} }
+	\addcontentsline{toc}{section}{\sc Conclusion}
+	\vskip 12pt
+}
+
+\def\references#1
+{
+	\clearpage
+  \addtocontents{toc}{\protect\contentsline{section}{\sc R\'ef\'erences bibliographiques}{}}
+
+  \bibliography{#1}
+  \bibliographystyle{unsrt}
+}
+\begin{comment}
+\def\tableofappendix
+{
+%%% Inspire du code trouve sur le site:
+% http://www.eleves.ens.fr/home/noirel/latex/astuces/astuces1.html
+%%%
+  \newread \toa
+  \newif \ifcontinue
+
+  \setcounter{nbannexe}{0}
+	\setcounter{nbsubannexe}{0}
+
+
+  \begingroup
+    \endlinechar=-1
+    \openin \toa =\jobname.toa\relax
+    \continuetrue
+    \loop
+      \ifeof \toa \continuefalse \else
+        \read \toa to\inputline
+        \ifx \inputline \@empty \else
+           \inputline
+        \fi
+      \fi
+    \ifcontinue  \repeat
+    \closein \toa
+  \endgroup
+}
+\end{comment}
+\newcommand\tableofappendix{\part*{ \sc Table des Annexes }\@starttoc{toa}}
+\def\Annexes
+{
+	\label{LastPage}
+		\addtocontents{toc}{\protect\contentsline{section}{\sc Annexes}{}{}}
+	\clearpage
+  \thispagestyle{empty}
+
+  \if@doubletome
+    \setcounter{nbtome}{2}\makeguard{ANNEXES}
+  \else
+    \vbox
+    {%
+      \vskip 10.5cm%
+      \begin{center}%
+        {\huge \bfseries ANNEXES}%
+      \end{center}%
+    }
+  \fi
+	
+
+	\clearpage
+	\lfoot{\small \@footdate}
+	\cfoot{%
+      \if@partieentete
+        \if@footsubjectexist
+           \small \@footsubject
+        \else
+           \small \@subject
+        \fi
+      \fi
+  }
+	\rfoot{{\thepage}}
+  \appendix
+
+	%\newcommand{\thesubannexe}{A.nbsubannexe}
+	%\setcounter{section}{0}
+	%\setcounter{subsection}{0}
+	\setcounter{secnumdepth}{3}
+	\newcounter{annexe}%[annexe]
+	\newcounter{subannexe}%[subannexe]
+		\setcounter{annexe}{0}
+	\setcounter{subannexe}{0}
+  \setcounter{figure}{0}
+  \setcounter{table}{0}
+  \renewcommand{\theannexe}{\Alph{annexe}}
+	\renewcommand{\thesubannexe}{\theannexe.\arabic{subannexe}}
+  \renewcommand{\thefigure}{\theannexe.\arabic{figure}}
+  \renewcommand{\thetable}{\theannexe.\arabic{table}}
+  %\Alph{section}
+  %\part*{ \sc Table des Annexes }
+
+  \vskip 3cm
+    %\newwrite\toa
+  %\immediate\expandafter\expandafter\openout\toa=\jobname.toa%
+  \tableofappendix
+
+  \clearpage
+	\pagenumbering{Roman}
+
+}
+
+\def\annexe#1
+{
+	\refstepcounter{annexe}
+  %\addtocounter{nbannexe}{1}
+	\setcounter{subsection}{0}
+	\setcounter{subannexe}{0}
+
+%  \if@filesw\immediate%
+  %\write \toa{\string%
+  %\addtocounter{annexe}{1}}
+  %\write \toa{\string%
+  %\setcounter{subannexe}{0}}
+  %\write \toa{\string%
+  %\contentsline{section}{\string\numberline{\string\Alph{annexe}} #1 }{\thepage}}
+	\addcontentsline{toa}{section}{\protect\numberline{\theannexe}~#1}
+  \section*{\theannexe~ #1 }
+  
+}
+
+\def\subannexe#1
+{
+
+	\refstepcounter{subannexe}
+  %\write \toa{\string%
+  %\addtocounter{subannexe}{1}}
+  %\write \toa{\string%
+  %\contentsline{subsection}{\string\numberline{\string\Alph{annexe}.\string\arabic{subannexe}} #1}{\thepage}}
+	\addcontentsline{toa}{subsection}{\protect\numberline{\thesubannexe}~#1}
+  %\addtocounter{nbsubannexe}{1}
+  \subsection*{\thesubannexe~ #1 }
+
+
+}\newcommand{\tm}{${}^{\mbox{\tiny\sf TM}}$}
+\newcommand{\TM}{\tm}
+
+\newcommand{\codeC}{\lstset{keywordstyle=\bf,showstringspaces=false,%
+frame=trBL,framesep=15pt,extendedchars=true,basicstyle=\footnotesize\ttfamily,%
+numbers=left,stepnumber=0,numberstyle=\small,xleftmargin=2em,language=C++,breaklines,%
+prebreak={\hbox{ $\rightarrow$}},postbreak={\hbox{$\hookrightarrow$ }}}}
+
+\renewcommand{\thefigure}{\thepart.\arabic{figure}}
+\renewcommand{\thetable}{\thepart.\arabic{table}}
+
+\newcommand{\partie}[1]
+{%
+  %\addtocounter{part}{+1}
+  \refstepcounter{part}
+  \setcounter{figure}{0}
+  \setcounter{table}{0}
+  \setcounter{section}{0}
+  \addcontentsline{toc}{part}{\protect\numberline{\Roman{part}}#1}
+  
+  
+  \if@partieentete
+     \chead{\small #1}
+  \fi
+  \if@partiebigpage
+    \vbox
+    {%
+      \vskip 10.5cm%
+      \begin{center}%
+        {\huge #1}%
+      \end{center}%
+    }
+    \clearpage
+  \else
+  	 {\parindent \z@ \raggedright
+     \interlinepenalty \@M
+     \normalfont
+     \huge \bfseries \thepart \hspace{0.5cm} #1\par}%
+     \nobreak
+     \vskip 3ex
+     \@afterheading
+    %\part*{#1}
+  \fi
+}
+
+
+\newcommand{\cf}[1]{(Fig. \ref{#1})}
+\newcommand{\ct}[1]{(Tab. \ref{#1})}
+\endinput
