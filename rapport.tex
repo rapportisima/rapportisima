@@ -1,0 +1,1049 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage[english,logoentete,notables,partieentete]{rapportisima} %options disponibles: doubletome,logoentete
+\usepackage{float}
+\graphicspath{{./Figs/}}
+%\usepackage{lastpage}
+\usepackage{color}
+\usepackage{listings}
+\usepackage[french,boxruled,lined,longend,nofillcomment]{algorithm2e}
+
+\SetKwComment{tcc}{[~}{~]}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{amsfonts,textcomp}
+\SetKwFor{For}{pour}{faire}{fait}
+\usepackage{fancybox}
+\usepackage{comment}
+%\usepackage[colorlinks=false]{hyperref} 
+\usepackage{a4wide}
+\usepackage[inline]{asymptote}
+\usepackage{listings}
+\usepackage{eurosym}
+\lstset{language=fortran,
+        breaklines=true,
+        %breakatwhitespace=true,
+        basicstyle=\tt\footnotesize, %\footnotesize
+        % keywordstyle=\tt\color{green},
+        % commentstyle=\tt\color{red},
+        showstringspaces=false,
+        tabsize=1,
+        numbers=left,
+        numberstyle=\footnotesize,
+        % backgroundcolor=\color{gray}
+        }
+
+
+\input{definition.tex}
+\author{Clément Rey et Régis Briant}
+\title{Projet de troisième année}
+\subject{Modélisation et calculs intensifs en Compatibilité Electro-Magnétique}
+\years{Octobre 2008-Avril 2009}
+\footdate{2008/2009}
+\logoISIMA{./logoisima.jpg}
+%Entreprise
+\logo{LASMEA.png}
+\adresse{ \textbf{LA}boratoire des \textbf{S}ciences et \\\textbf{M}ateriaux pour l' \textbf{E}lectronique et d' \textbf{A}utomatique\\ \textbf{G}roup\\ UMR 6602 UBP / CNRS\\Campus des Cézeaux\\24, Avenue des Landais\\63177 AUBIERE Cedex\\FRANCE}
+%responsables
+\respd{Responsable de projet :}{Pierre Bonnet }
+\presentepara{Clément Rey et Régis Briant}
+\duree{Durée : 120h}
+
+
+
+%espacement
+\espaceenhaut{\vskip 0pt}
+\espaceimageresp{\vspace{\stretch{1}}}
+\image{
+	\centering
+	\includegraphics[width=0.6\textwidth]{./Figs/chambre_reverb_1753.png}
+}
+
+\espaceadressetitre{\vskip 3cm}
+\espaceabstract{\vskip 2cm }
+\espacedate{\vskip 0.6cm}
+
+\newcommand{\vectE}{\stackrel{\rightarrow}{E}}
+\newcommand{\vectH}{\stackrel{\rightarrow}{H}}
+\newcommand{\vectR}{\stackrel{\rightarrow}{rot}}
+\newcommand{\vectk}{\stackrel{\rightarrow}{k}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{document}
+
+% generates the title
+\maketitle
+%remeciement
+\thanks
+{
+Nous voulons remercier Pierre Bonnet pour nous avoir aidé dans ce projet. Nous remercions aussi notre professeur de programmation parallèle Thierry Dubois pour nous avoir aidé lors de notre projet.
+}
+%resume et abstract
+
+\resume
+{\indent De nos jours il y a de plus en plus d'interférences électromagnétiques, due à l'électronique, dans notre environnement quotidien. L'étude de la \textbf{Compatibilité électromagnétique} consiste à étudier les champs produits par différents appareils afin de vérifier qu'ils n'interfèrent pas les uns avec les autres.\\
+\indent Notre projet est la suite d'un ancien projet réalisé par des étudiants de l'ISIMA en 2005-2006. Nous avions donc à notre disposition un programme simulant une cavité vide dans laquelle on pouvait créer une source électromagnétique et observer sa propagation à l'intérieur. La propagation des ondes étant modélisée par les équations de Maxwell locale, résoluent par la méthode des \textbf{Différences Finies}.\\
+\indent Ce programme, destiné à être exécuté sur un cluster à été écrit en fortran en utilisant \textbf{MPI} (Message Parsing Interface), une bibliothèque permettant de faire du \textbf{calcul parallèle}.\\
+\indent Notre travail à été de pouvoir ajouter des objets métalliques à l'intérieur de la cavité et de pouvoir créer un milieu différent dans la cavité. Ce rapport présente tout d'abord, dans une première partie le problème d'un point de vue global. Une deuxième partie est consacrée à la première solution que nous avons implémenté et pour finir la troisième partie explique les améliorations apportées au programme et la méthode utilisée pour valider nos résultats.}
+\motscles{Compatibilité électromagnétique, Calcul parallèle, Différences finies, Message Parsing Interface}
+
+\abstract
+{
+\indent Nowadays there are many electromagetic fields due to electronic devices in our daily environment. Study of \textbf{electromagnetic Compatibility} is to observe fields produced by those devices and how they interfere between them.\\
+\indent Our Project is the following of a former project conducted by ISIMA's student in 2005-2006. The aim of their project was to simulate electromagnetic source in an empty cavity and to observe its propagation in it. Wave propagation are modelled by Maxwell's equations and solved by the \textbf{Finite Differences} method in time domain.\\
+\indent The program has been made to be run on a cluster and was writen in fortran using \textbf{MPI} (Message Passing Interface) which is library design to do \textbf{parallel computation}.\\
+\indent Our primary objective was to implement the possibility to add metalic object in the cavity and to being able to have a non empty medium in the cavity. In this report we first pose the wave propagation problem and explain how to solve it. Then we present a first implementation of the solution and to finish in the last section we show improvments and tests that we did to enhance and validate the program.
+}
+\keywords{Electromagnetic Compatibility, Finite Difference, MPI, Parallel Computation}
+
+\makebeginning[B]
+\intro
+\indent De nos jours il y a de plus en plus d'interférences électromagnétiques, dues à l'électronique, dans notre environnement quotidien : téléphone portable, ondes radio, WiFi... Toutes ces technologies génèrent des champs électromagnétiques à des fréquences différentes et pour éviter que ces appareils interfèrent les uns avec les autres, il est nécessaire de modéliser et d'étudier la Compatibilité ElectroMagnétique (CEM), en la simulant par exemple.\\
+
+
+\indent Notre projet est la suite d'un ancien projet réalisé par des étudiants de l'ISIMA en 2005-2006. Nous avions donc à notre disposition un programme simulant une cavité vide dans laquelle on pouvait créer une source électromagnétique et observer sa propagation à l'intérieur. La propagation des ondes étant modélisée par les équations de Maxwell locale, résoluent par la méthode des différences finies.\\
+\indent Ce programme destiné à être exécuté sur un cluster à été écrit en fortran en utilisant MPI (Message Parsing Interface), une bibliothèque permettant de faire du calcul parallèle. L'utilisation du calcul parallèle permet d'accélérer l'exécution du programme en utilisant plus efficacement les capacités des différents processeurs disponibles sur le cluster.\\
+
+
+\indent Le travail qui nous a été demandé de réaliser était de pouvoir ajouter des objets métalliques ou magnétiques à l'intérieur de la cavité afin d'observer le comportement des ondes. Nous avons aussi ajouté la possibilité pour l'utilisateur de modifier le milieu présent à l'intérieur de la cavité. Nous avons pour cela commencé par implémenter notre solution en matlab afin de pouvoir prendre en main le programme initial. Nous avons ensuite fait une première implémentation en fortran en parallélisant nos modifications apportées au programme. Cette première implémentation n'étant pas parfaite, nous avons essayé de l'améliorer en essayant différentes méthodes de parallélisation.\\
+
+
+\indent Ce rapport présente tout d'abord dans une première partie le problème, la méthode de résolution des équations de propagation des ondes. Une deuxième partie est consacrée à la première solution que nous avons implémenté et pour finir la troisième partie explique les améliorations apportées au programme et la méthode utilisée pour valider nos résultats.
+
+
+\newpage
+\partie{Présentation du projet}
+\section{Compatibilité électromagnétique}
+\subsection{\'Equation de Maxwell}
+L'étude de la propagation des ondes est très importante autant du point de vue scientifique que médicale. La propagation des ondes est régie par des lois établies au 19 siècle par Maxwell. Le travail de Maxwell dans le cadre de la propagation d'onde a été de synthétiser les connaissances empiriques sur ces phénomènes (loi de Faraday) pour en donner une formulation mathématique. On peut citer les quatre lois de la propagation d'onde et de l'établissement des champs électromagnétiques :
+
+\begin{align}
+div \stackrel{\rightarrow}{E}                         & = \frac{\rho}{\epsilon_{0}}\\
+div \stackrel{\rightarrow}{H}                         & = 0 \\
+\stackrel{\rightarrow}{rot} \stackrel{\rightarrow}{E} & = - \mu_0\frac{\partial{\stackrel{\rightarrow}{H}}}{\partial{t}} \label{EB}\\
+\stackrel{\rightarrow}{rot} \stackrel{\rightarrow}{H} & =  \stackrel{\rightarrow}{j} + \epsilon_{0} \frac{\partial{\stackrel{\rightarrow}{E}}}{\partial{t}} \label{BE}
+\end{align}
+
+Ces loi régissent le comportement des ondes et leurs propagations dans différents milieu.\\
+Avec :
+\begin{itemize}
+\item $\stackrel{\rightarrow}{H}$: champ magnétique.
+\item $\stackrel{\rightarrow}{E}$: champ électrique.
+\item $\stackrel{\rightarrow}{j}$: vecteur densité de courant.
+\item $\rho$: densité de charge électrique.
+\item $\epsilon_0$: la permittivité diélectrique du vide. 
+\item $\mu_0$: la permittivité magnétique du vide.  
+\end{itemize}
+\subsection{Compatibilité électromagnétique}
+	Définition (Wikipedia) : La compatibilité électromagnétique (CEM) est l'aptitude d'un appareil ou d'un système électrique ou électronique à fonctionner dans son environnement électromagnétique de façon satisfaisante et sans produire lui-même des perturbations électromagnétiques intolérables pour tout ce qui se trouve dans cet environnement. Donc pour étudier la compatibilité électromagnétique il est donc nécessaire de simuler une propagation d'ondes dans un milieu donné (constitué de plusieurs objets).\\
+	Par exemple on trouve comme application l'étude de la propagation des ondes dans une cavité réverbérante ou encore la génération d'une onde plane pour étudier l'impact d'un champ électromagnétique sur un avion. Ces deux applications vont être étudiées plus précisément dans la suite du rapport. La propagation dans une chambre réverbérante a déjà été réalisée par le binôme précédent.\\
+	Les équations de Maxwell lient les variations temporelles du champ $\vectE$ (respectivement du champ $\vectH$) avec les variations spatiales du champ $\vectH$(respectivement du champ $\vectE$ ). On a alors des équations aux dérivées partielles. Pour être résolu de manière consistante il est nécessaire de prendre en compte des conditions aux limites et des conditions initiales. Pour prendre en compte les différents objets dans le cadre de la compatibilité électromagnétique. On va donc résoudre les deux équations (\ref{EB}) et (\ref{BE}) imposant comme conditions aux limites les objets. On a alors un problème du type :
+\begin{equation}
+P
+\left\{\begin{aligned}
+\Omega\times\mathbb{R}^{+} & \rightarrow \mathbb{R}^{3} \nonumber \\
+\vectR \vectE              & = - \mu_{0} \frac{\partial{\vectH}}{\partial{t}}  \\ \nonumber
+\vectR \vectH              & = \stackrel{\rightarrow}{j} + \epsilon_{0} \frac{\partial{\vectE}}{\partial{t}} \\ \nonumber
+\vectE(x,y,z,0)            & = 0 & \textrm{(CI)}\\ \nonumber
+\vectH(x,y,z,0)            & = 0 & \textrm{(CI)}\\ \nonumber
+\vectE(\partial{\Omega},t) & = 0 & \textrm{(CL)}\\ \nonumber
+\vectH((\partial{\Omega},t) & = 0 & \textrm{(CL)}\\ \nonumber
+\end{aligned}
+\right.
+\end{equation}
+Où $\Omega $ est un ensemble de $\mathbb{R}^3$.
+\section{Modélisation des conditions aux limites}
+\subsection{La chambre réverbérante}
+Dans une chambre réverbérante on étudie la propagation d'une onde électromagnétique et son effet sur les objets. Cette pièce a une caractéristique spéciale, ses parois sont en métal c'est à dire du PEC. Le PEC impose des conditions aux limites E tangentielle = 0. Les objets présents dans la pièce vont eux aussi imposer des conditions aux limites différentes suivant leurs propriétés.
+\subsection{Génération d'une onde plane}
+	La génération d'une onde plane peut être utile pour étudier le comportement de certains objets complexes dans un champ électromagnétique. Mais pour générer une onde plane il faut se mettre dans des conditions bien précises. En effet il faut travailler dans un tube PEC-PMC. Un tube PEC-PMC est défini par 4 plaques PEC et 2 plaques PMC (champ magnétique tangentiel nul),on définit alors les conditions aux limites. On peut voir un exemple de tube PEC-PMC sur la figure \ref{fig:pecpmc}. Ce tube est généré par le fichier visualize.m a partir d'un fichier de plaque (voir annexe \ref{subann:visualize}). Il faut aussi générer un plan source a l'intérieur de ce tube.
+\begin{figure}
+\begin{center}
+\includegraphics[scale = 0.33]{tube_pec_pmc.png}
+\end{center}
+\caption{Exemple de tube PEC PMC, rouge PMC, bleu PEC}
+\label{fig:pecpmc}
+\end{figure}
+De plus l'intérêt de générer une onde plane est que cela permettra de valider dans le code la gestions des objets. En effet on considérera le tube PEC PMC comme un objet. Si on l'on observe une onde plane se propager alors on sait que l'on pourra prendre en compte des objets métalliques.
+\section{Différences finies}
+\subsection{Cas Général}
+	Les deux exemples d'applications ci dessus rentrent parfaitement dans le cadre des équations de Maxwell. Pour les Résoudre il existe plusieurs méthodes comme :
+	\begin{itemize}
+		\item \'Éléments finis.
+		\item Volumes finis.
+		\item Différences finies.
+	\end{itemize}
+ La méthode qui a été choisi par nos prédécesseurs était les différences finies ou FDTD ( Finite Diffenrces Time Domain) avec une approximation au 2ème ordre. L'avantage de ces méthodes est qu'elles sont plus faciles à implémenter lorsque le maillage est cartésien. Le problème traité par le binôme de l'an dernier pouvait se mettre sous la forme :
+\begin{equation}
+P_i
+\left\{\begin{aligned}
+\Omega\times\mathbb{R}^{+} & \rightarrow \mathbb{R}^{3} \nonumber \\
+(\vectR \vectE)_i          & = -\mu_{0} \frac{\partial{\vectH_i}}{\partial{t}}  \\ \nonumber
+(\vectR \vectH)_i          & =  \stackrel{\rightarrow}{j} + \epsilon_{0} \frac{\partial{\vectE}}{\partial{t}} \\ \nonumber
+\vectE_i(x,y,z,0)            & = 0 & \textrm{(CI)}\\ \nonumber
+\vectH_i(x,y,z,0)            & = 0 & \textrm{(CI)}\\ \nonumber
+\vectE_i(\partial{\Omega}_i,t) & = 0 & \textrm{(CL)}\\ \nonumber
+\vectH_i((\partial{\Omega}_i,t) & = 0 & \textrm{(CL)}\\ \nonumber
+\end{aligned}
+\right.
+\end{equation}
+Avec :
+\begin{align}
+ i & \in \left\{x,y,z\right\} \\
+ \vectH &= \textrm{ composante du champ H selon }(Oi) \\
+ \vectE &= \textrm{ composante du champ E selon }(Oi) \\
+ \Omega & = \left[0;L_x\right]\times \left[0;L_y\right]\times \left[0;L_z\right] \\
+ \partial{\Omega}_i & = \left\{ \left\{0\right\}\times  [0;L_j]\times [0;L_k] \cup  \left\{L_i\right\} \times [0;L_j]\times [0;L_k]  |  i\neq j \textrm{ } i\neq k \textrm{ et } j\neq k \right\} \\ 
+\end{align}
+
+Cette EDP traite le cas de la chambre réverbérante. Mais ne permet pas d'insérer des objets dans cette cavité. Le but de notre projet était donc de modifier ce problème pour gérer les deux cas suivant :
+\begin{itemize}
+\item la cavité réverbérante
+\item la propagation d'une onde plane
+\end{itemize}
+Dans la suite nous allons voir comment modifier le problème pour gérer ces deux cas.
+\subsection{La chambre réverbérante et la présence d'objets}
+Une chambre réverbérante est constitué de plaque de métal absorbant le champ électrique tangentiel. Les conditions au bord du problème modélisent donc la cavité. Pour prendre en compte les objets il faut rajouter comme contrainte au problème P' :
+\begin{displaymath}
+E(bord_{objet}) = 0
+\end{displaymath}
+Si l'objet est métallique.
+\subsection{Propagation d'une onde plane}
+Pour la propagation d'une onde plane le problème est semblable. Dans ce cas nous avons deux types d'objet : des plaques PEC avec la condition : $\partial{E}(bord_{PEC}) = 0$ et des plaques PMC. Ce qui rajoute la condition : $\partial{H}(bord_{PMC}) = 0$. De plus il faut générer la source. On obtient les deux conditions suivantes :
+\begin{eqnarray}
+\vectE_y(plan\_source) & = &f(t) \\
+\vectH _z(plan\_source) & = &\frac{f(t)}{377}
+\end{eqnarray}
+On a alors une propagation de l'onde plane dans la direction $(Ox)$. En effet pour que l'onde se propage il faut que le trièdre $(\vectE , \vectH ,\vectk)$ forme un repère direct.
+\subsection{Résolution par Différences finies}
+La méthode de résolution utilisée pour ces EDP est la méthode des Différences finies. Dans un premier temps nous allons expliquer comment mettre en place cette méthode pour ce type d'EDP puis dans un deuxième temps quels sont les propriétés et contraintes liées à cette résolution.
+\subsection{Approximation des dérivées spatiales}
+Au point $(x,y,z,t)$
+\begin{eqnarray}
+\frac{\partial{E_z}}{\partial{y}} &\approx& \frac{E_z(x,y+\frac{1}{2},z,t) - E_z(x,y-\frac{1}{2},z,t)}{h} \\
+\frac{\partial{E_y}}{\partial{z}} &\approx& \frac{E_y(x,y,z+\frac{1}{2},t) - E_y(x,y,z-\frac{1}{2},t)}{h} \\
+\frac{\partial{E_x}}{\partial{z}} &\approx& \frac{E_x(x,y,z+\frac{1}{2},t) - E_x(x,y,z-\frac{1}{2},t)}{h} \\
+\frac{\partial{E_z}}{\partial{x}} &\approx& \frac{E_z(x+\frac{1}{2},y,z,t) - E_z(x-\frac{1}{2},y,z,t)}{h} \\
+\frac{\partial{E_y}}{\partial{x}} &\approx& \frac{E_y(x+\frac{1}{2},y,z,t) - E_y(x-\frac{1}{2},y,z,t)}{h} \\
+\frac{\partial{E_x}}{\partial{y}} &\approx& \frac{E_x(x,y+\frac{1}{2},z,t) - E_x(x,y-\frac{1}{2},z,t)}{h}
+\end{eqnarray}
+On obtient alors pour le rotationnel :
+\begin{equation}\label{rot}
+(\vectR \vectE)_x = \frac{\partial{E_z}}{\partial{y}} - \frac{\partial{E_y}}{\partial{z}} \approx \frac{E_z(x,y+\frac{1}{2},z,t) - E_z(x,y-\frac{1}{2},z,t)}{h} - \frac{E_y(x,y,z+\frac{1}{2},t) - E_y(x,y,z-\frac{1}{2},t)}{h}
+\end{equation}
+
+
+\subsection{Application au problème}
+Pour résoudre par la méthode des différences finies on discrétise l'espace dans les 3 trois directions selon ce schéma \ref{fig:yeegrid} :
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale = 0.5]{yee_grid.png}
+\caption{Grille de Yee}
+\label{fig:yeegrid}
+\end{center}
+\end{figure}
+
+On discrétise aussi en temps on obtient le schéma \ref{fig:timestep} :
+\begin{figure}
+\begin{center}
+\includegraphics[scale = 0.5]{time_dec.png}
+\caption{Pas temporel en saut de grenouille}
+\label{fig:timestep}
+\end{center}
+\end{figure}
+On commence par discrétiser l'espace dans les trois directions $(Ox),(Oy),(Oz)$ avec comme pas $\Delta x$ et $\Delta y$ et $\Delta z$. On travaillera alors avec les indices $(i,j,k)$. Ensuite on discrétise le temps avec comme pas $\Delta t$. On travaillera alors avec l'exposant n.
+En partant des équations de maxwell (et après calcul) on obtient les relations \ref{eq:disE} et \ref{eq:disH}:
+\begin{multline}\label{eq:disE}
+E_x^{n+1}(i+\frac{1}{2},j,k) = \frac{\frac{\epsilon}{\Delta t}-\frac{\sigma}{2}}{\frac{\epsilon}{\Delta t}+\frac{\sigma}{2}}.E_x^{n+1}(i+\frac{1}{2},j,k) \\ + \frac{1}{(\frac{\epsilon}{\Delta t}+ \frac{\sigma}{2})\Delta y}\left[ H_z^{n+\frac{1}{2}}(i+\frac{1}{2},j+\frac{1}{2},k) -
+H_z^{n+\frac{1}{2}}(i+\frac{1}{2},j-\frac{1}{2},k)\right] - \\
+\frac{1}{(\frac{\epsilon}{\Delta t}+\frac{\sigma}{2})\Delta z}\left[ H_y^{n+\frac{1}{2}}(i+\frac{1}{2},j,k+\frac{1}{2}) - H_y^{n+\frac{1}{2}}(i+\frac{1}{2},j,k-\frac{1}{2})\right] + o(h^2)
+\end{multline}
+
+\begin{multline}\label{eq:disH}
+H_x^{n+\frac{1}{2}}(i,j+\frac{1}{2},k+\frac{1}{2}) = H_x^{n-\frac{1}{2}}(i,j+\frac{1}{2},+\frac{1}{2}) \\ + \frac{1}{\mu \Delta z}\left[ E_y^{n}(i,j+\frac{1}{2},k+1) -
+E_y^{n}(i,j+\frac{1}{2},k) \right] - \\
+\frac{1}{\mu \Delta y}\left[ E_z^{n}(i,j,k+\frac{1}{2}) - E_z^{n}(i,j,k+\frac{1}{2})\right] + o(h^2)
+\end{multline}
+Ces relations mettent clairement en évidence les premiers inconvénients des cette méthode : on ne peut pas avoir pour un même temps et pour un même point le champ $\vectE$ et $\vectH$ 
+
+\subsection{Conditions de convergence générale}
+Pour que le problème soit consistant il est nécessaire que la solution converge. Cette condition de convergence est \ref{eq:condconv}:
+\begin{equation}\label{eq:condconv}
+\Delta t \leq \frac{1}{c\sqrt{(\frac{1}{\Delta x})^2 + (\frac{1}{\Delta y})^2 + (\frac{1}{\Delta z})^2}}
+\end{equation}
+La constante $c$ est définie par $c^2 = \frac{1}{\epsilon_{0}\mu_0} $.\\
+Cette condition peut être pénalisante car plus on améliore la précision plus le pas de temps est petit et donc plus les calculs seront longs.\\
+Si cette condition n'est pas respecté alors on risque de diverger ou de converger vers une solution fausse.
+\section{Le calcul parallèle}
+Lorsque l'on essaie de résoudre ce problème on se rend compte que le temps de calcul est assez long pour plusieurs raisons  et que la place mémoire occupée est importante :
+\begin{itemize}
+\item condition de convergence.
+\item 3d.
+\item plusieurs echelles.
+\end{itemize}
+Par exemple pour la chambre réverbérante si on suppose qu'elle fait comme dimension $1m\times 1m \times 1m$, il faut au moins avoir $\Delta x \leq 0,001 m$ pour chaque dimension. On va donc travailler avec de matrices de taille supérieure à $10^9$ éléments. Ce qui peut poser un problème de mémoire et de temps d'exécution.
+\subsection{Notion de calcul parallèle}
+Un processeur est constitué de trois niveaux de mémoire. Ces mémoires sont rapides et ont une fréquence équivalente à celle du processeur. Par contre elles sont de petite taille (quelques Mo). Lorsque les données du problème sont trop grandes le système ne peut pas charger dans la mémoire l'ensemble des données. Elles sont alors chargées dans la RAM, il faut donc que l 'OS charge régulièrement les données de la RAM à la mémoire du processeurs. Ce chargement se fait par l'intermédiaire d'un bus (fsd). La fréquence du bus est de généralement $\approx$ 200k Hz alors que celle du processeur est de $\approx$ 2G Hz. Ce qui ralentit le calcul dans ce genre de problème est la fréquence de ce bus. Ce type de situation est assez fréquente lorsque la taille du problème est grande comme dans notre cas. Pour le traiter on va utiliser le calcul parallèle.\\
+Pour effectuer du calcul parallèle il faut d'abord avoir quelques notions sur l'architecture multiprocesseur. On trouve deux grandes familles d'architecture. La première est appelée ordinateur à mémoire partagée. Dans ce type de structure tous les processeurs ont accès à la même mémoire. Ce type d'ordinateur est efficace (performance de réseau) mais coûte relativement cher. On peut prendre comme exemple la machine Solaire de l'ISIMA : 16 processeurs pour un coût de 200k \euro. La deuxième grande famille d'architecture sont les ordinateurs à mémoire distribuée. Ce type d'architecture est caractérisé par le fait que chaque noeuds de calcul a sa propre mémoire. Ce genre d'architecture est un peu moins performant que la précédente mais son coût est moins important. Il existe un troisième type d'architecture mais moins répondu : ce sont les ordinateurs à processeurs vectoriels. Ce type d'architecture est efficace mais est très peu développé pour des raisons commerciales.
+\subsection{Outils}
+La programmation s'effectue à l'aide d'outils. On a alors deux grandes catégories d'outils en programmation parallèle : OpenMP et MPI.
+\subsubsection{OPENMP}
+	OpenMP est un pré-compilateur permettant de paralléliser un code automatiquement. On indique simplement à OPENMP la partie du code que l'on souhaite paralléliser. Ce pré-compilateur se charge de paralléliser. On peut l'utiliser de la manière suivante (langage C et Fortran):
+\begin{code}{fortran}{}{}
+!$ omp parallel do 
+do i=1,n
+.
+.
+.
+end do
+!$ omp end parallel do
+\end{code}
+A la ligne 1 et 7, on a les directives OPENMP.
+OPENMP gère les communications entre les processeurs de manière implicite. Un des avantages de ce type d'outils est la simplicité de programmation et de lecture du code : on ne change pas l'algorithme. Les inconvénients majeurs sont que OPENMP ne marche que sur les ordinateurs à mémoire partagée et n'est plus efficace lorsque le nombre de processeurs est supérieur à dix.
+\subsubsection{MPI}
+La deuxième méthode est plus générale et efficace sur un nombre de processeur indéterminé. C'est MPI : Message Passing Interface. MPI permet de gérer soit même les communications ce qui permet d'optimiser, quand cela est possible, les performances de l'algorithme. De plus MPI est fonctionnel sur les ordinateurs à mémoire partagée ou bien à mémoire distribuée. Il existe deux implémentations de MPI : mpich et openmpi. Ce sont des bibliothèques écrites en C mais que l'on peut interfacer avec beaucoup de langage : Fortran, C++ ...On peut voir un exemple d'utilisation de MPI : envoi et réception de la variable L par le processeur 0 au processeur 1.
+\begin{code}{fortran}{}{}
+real(kind = 8) :: L
+if (i_proc == 0) then 
+	call mpi_send(L,1,mpi_double_precision,1,10,mpi_comm_world,i_err)
+else
+	call mpi_recv(L,1,mpi_double_precision,0,10,mpi_comm_world,i_etat,i_err)
+end if
+\end{code}
+Un programme MPI est compilé par  la commande
+\begin{code}{sh}{}{}
+mpif90 hello.f90 -o hello
+\end{code}
+Et exécuté par (avec n\_proc : le nombre de processeur utilisé).
+\begin{code}{sh}{}{}
+mpirun -np n_proc hello
+\end{code}
+MPI permet de donner des codes qui soient portables et pouvant s'utiliser sur des machines à mémoire partagée et à mémoire à distribuée. De plus on peut utiliser un grand nombre de processeur. Par contre l'utilisation de mpi nécessite dans la plupart des cas de changer les algorithmes. Le code est donc moins facile à lire.
+\subsection{Cadre du projet}
+Dans le cadre de notre projet nous devions prendre en compte que le code serait utilisé sur le cluster de l'IFMA et du CIRI qui sont des machines à mémoire distribuée, l'utilisation de mpi s'impose donc. De plus nous partions d'un code fortran 90 déjà écrit pour MPI.
+\section{Conclusion de la partie 1}
+Dans cette partie nous avons expliqué une partie du travail de l'ancien binôme qui a travaillé sur ce problème : résolution par différences finies des équations de Maxwell et programmation d'un code fortran parallèle utilisant la bibliothèque MPI dans le cas de la chambre réverbérante sans objet.\\
+Nous avons aussi abordé les objectifs que nous a donné notre chef de projet Pierre Bonnet comme prise en compte d'ojet métallique dans une chambre réverbérante et génération d'une onde plane.\\
+Dans la suite nous allons voir comment nous avons procédé pour atteindre les objectifs que nous avait fixé notre chef de projet.
+\newpage
+
+
+
+
+
+
+\newpage
+\partie{Programmation}
+\label{partie:programmation}
+\section{Modélisation}
+A partir d'un ancien projet réalisé par des anciens étudiants\cite{3} de l'ISIMA modélisant une cavité vide, il nous a été demandé de pouvoir ajouter des plaques (PEC ou PMC) à l'intérieur de cette cavité et de pouvoir créer un milieu non vide et non isotrope.
+
+\subsection{Ancien programme}
+Le programme issu de l'ancien projet de l'ISIMA suivait l'algorithme suivant :
+
+\begin{algorithm}[H]
+\caption{Programme initial issu de l'ancien projet}
+\begin{itemize}
+\item Initialisation des paramètres
+\end{itemize}
+\For{nombre d'itérations non atteint}
+{
+\begin{itemize}
+\item Mise à jour de la source (ou initialisation pour la première itération)
+\item Envoie des valeurs nécessaires à chaque processeur du champ électrique
+\item Calcul du champ magnétique par différences finies
+\item Envoie des valeurs nécessaires à chaque processeur du champ magnétique
+\item Calcul du champ électrique par différences finies
+\end{itemize}
+}
+\begin{itemize}
+\item Sauvegarde des résultats
+\end{itemize}
+\end{algorithm}
+
+Le problème est découpé suivant une seule dimension, l'axe x : 
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=0.6\textwidth]{domaine_de_calcul.png}\\
+\end{tabular}
+\caption{Découpage du domaine de calcul}
+\label{domaine_de_calcul}
+\end{figure}
+
+
+\subsection{Les plaques}
+Pour modéliser les plaques nous avons dû trouver une solution pour :
+\begin{itemize}
+\item Créer des matrices de la taille du domaine et modélisant l'emplacement des plaques.
+\item Envoyer les matrices des plaques à chaque processeur.
+\item Annuler les valeurs au bon endroit et au bon moment dans le programme.\\
+\end{itemize}
+
+\indent Pour créer les matrices de plaques, on a écrit une subroutine ("lire\_objet.f90") qui lit à partir d'un fichier, les plaques que l'utilisateur a défini en suivant une syntaxe précise (Section : \ref{organisation_du_code}). Ces matrices contiennent des 1 là où il n'y a pas de plaque, et des 0 là où il y en a.\\
+Cette opération est faite une seule fois, au début du programme car les plaques sont fixes et n'ont donc pas besoin d'être lues à chaque itération.\\
+\indent En revanche, l'annulation des plaques est nécessairement faite dans la boucle principale car le calcul du champ électrique et magnétique entrainera une modification des valeurs annulées. On annulera donc le champ magnétique et le champ électrique séparément, juste après leurs calculs respectifs, par une multiplication point par point.\\
+\indent Les plaques sont stockée dans 6 matrices différentes 3 pour les plaques PMC suivant 3 axes (PMCx, PMCy, PMCz) et 3 autres pour les PEC suivant 3 axes (metalx, metaly, metalz).\\
+
+\indent Tout ceci est fait uniquement sur un seul processeur car ces matrices sont ensuite envoyée sur chacun des processeurs. Il nous faut donc définir un schéma de communication et plusieurs cas on été envisagé (Section \ref{Parallelisationglobale} et  Section \ref{Parallelisationlocale}).\\
+
+\subsection{Milieu non vide et non isotrope}
+\indent La modification du milieu se fait en multipliant respectivement les constantes $\epsilon_0$ et $\mu_0$ par des constantes $\epsilon_r$ et $\mu_r$. Initialement ces constantes étaient invariantes suivant la direction où l'endroit de l'espace ou l'on se trouvait ce qui rendait l'espace homogène et isotrope.\\
+
+\indent Pour modéliser un milieu non vide et non isotrope on créé donc des matrices contenant ces coefficients $\epsilon_r$ et $\mu_r$ que l'on multipliera ensuite par les valeurs initiales $\epsilon_0$ et $\mu_0$.\\
+\indent De la même façon que pour la création des matrices de plaques, la création des matrices $\epsilon$ et $\mu$ peut être fait au début du programme en les lisant dans un fichier texte.
+
+\indent Sur chaque ligne du fichier texte l'utilisateur doit mettre les coordonnées de 2 points et un coefficient. Les deux points décriront un cube dans lequel le coefficient multiplicateur sera le coefficient indiqué.
+
+\indent La création de ces matrices peut aussi être faite au début du programme lors de l'initialisation car ces coefficients ne changeront pas au cours des itérations de la boucle principale. En multipliant ensuite ces matrices par les coefficients $\epsilon_0$ et $\mu_0$ et en utilisant ces matrices à la place des coefficients on pourra créer un milieu non vide et non isotrope. Les plaques sont stockées dans 6 matrices différentes 3 pour les coefficients $\epsilon$ suivant 3 axes ($epsilon_x$, $epsilon_y$, $epsilon_z$) et 3 autres pour les coefficients $\mu$ suivant 3 axes ($mu_x$, $mu_y$, $mu_z$).\\
+
+\indent Tout ceci est fait uniquement sur un seul processeur car ces matrices sont ensuite envoyées sur chacun des processeurs. Le principe restant le même que pour les plaques, le shéma de communication le sera aussi (section \ref{Parallelisationglobale} et section \ref{Parallelisationlocale}).
+
+
+
+
+
+
+
+
+\section{Première approche}
+\label{Parallelisationglobale}
+La première approche que nous avons programmé envoie les matrices (plaques, $\epsilon$ et $\mu$) en entier à chaque processeurs et laisse chaque processeur sélectionner la partie des matrices qui l'intéresse.\\
+
+Pour l'envoie d'une matrice on a choisi d'utiliser la fonction mpi "mpi\_bcast" car c'était la fonction utilisée dans le programme initial pour envoyer les matrices de champs.\\
+\indent "mpi\_bcast" est un envoi à tous les processeurs de données initialement présentes un seul processeur.\\
+
+Exemple avec la matrice PMCx :
+\begin{code}{fortran}{}{}
+call mpi_bcast(PMCx(1,1,1),Ny*Nz*(Nx+1),mpi_double_precision,0,mpi_comm_world,i_err)
+\end{code}
+
+
+\indent Une fois le calcul des champs magnétiques et électriques effectué, il faut annuler respectivement les plaques PMC et métalliques. Pour cela, chaque processeur va sélectionner la partie de la matrice qui l'intéresse en utilisant une indexation dépendant du numéro de processeur :\\
+
+Exemple avec Hx :
+\begin{code}{fortran}{}{}
+Hx(1:m,:,:)=Hx(1:m,:,:)*PMCx(i_proc*m +1:(i_proc + 1)*m, : , : )
+\end{code}
+
+Il faut aussi penser à distinguer le cas du dernier processeur dont le domaine de calcul est plus grand que les autres.
+
+Cette méthode est simple à programmer car il n'y a pas de distinction de cas avant envoi à des processeurs et elle est dans la continuité de ce qui a déjà été programmé. En revanche on est obligé d'envoyer à tous les processeurs des matrices de grande taille alors que chaque processeur ne se sert que d'une portion de ces matrices.\\
+\indent On a donc un code simple, mais des envois inutiles. Pour chaque envoi de matrice, la matrice est buffurisée et il se peut donc qu'elle soit trop grande et que le buffer soit plein.
+
+
+
+\section{Deuxième approche}
+\label{Parallelisationlocale}
+Cette deuxième approche est une variante de la première approche. Elle consiste à envoyer uniquement la partie de la matrice nécessaire à chaque processeur et donc découper les matrices avant leurs envois.
+
+Pour l'envoi des matrices, on ne peut plus utiliser la fonction "mpi\_bcast" car on n'envoie pas la même chose à chaque processeur. On a donc choisi d'utiliser les fonctions "mpi\_ssend" et "mpi\_recv" pour effectuer les envois. Ces fonctions réalisent un envoi synchronisé, mais il faut quand même faire attention à mettre les réception dans le même ordre que les envois.\\
+
+Exemple avec la matrice PMCx :\\
+\begin{code}{fortran}{}{}
+	! Allocation de la matrice
+	if(i_proc > 0 .and. i_proc < n_proc - 1) then
+		allocate(PMCx(1:m,1:Ny,1:Nz))
+	elseif ( i_proc == n_proc - 1 ) then
+		allocate(PMCx(1:m+1,1:Ny,1:Nz))
+	end if
+
+	! envoi des matrices des plaques a chaque processeurs
+	if( i_proc == 0 ) then
+		do i= 1 , n_proc - 2
+			PMCx(1:m+1,:,:) = PMCxglo(i*m+2:(i+1)*m,:,:)
+			call mpi_ssend(PMCx(2,1,1),m*Ny*Nz,mpi_double_precision,i&
+			,i*i_etiq + 1,mpi_comm_world,i_err)
+		end do
+
+		! Gestion du dernier processeur
+		PMCx(1:m+1,:,:) = PMCxglo((n_proc -1)*m+1:((n_proc - 1)+1)*m+1,:,:)
+		call mpi_ssend(PMCx(1,1,1),(m+1)*Ny*Nz,mpi_double_precision,&
+		n_proc-1,(n_proc-1)*i_etiq + 1,mpi_comm_world,i_err)
+
+		! gestion du premier processeur
+		PMCx(1:m,:,:) = PMCxglo(1:m,:,:)
+	end if
+
+	! Reception des plaques
+	if (i_proc > 0) then
+		if (i_proc < n_proc - 1) then
+			call mpi_recv(PMCx(1,1,1),m*Ny*Nz,mpi_double_precision,0&
+			,i_proc*i_etiq+1,mpi_comm_world,i_etat,i_err)
+		else
+			call mpi_recv(PMCx(1,1,1),(m+2)*Ny*Nz,mpi_double_precision,&
+			0,i_proc*i_etiq + 1,mpi_comm_world,i_etat,i_err)
+		end if
+	end if
+\end{code}
+
+\indent Cette méthode, plus compliquée, impose de distinguer beaucoup de cas avant l'envoi (1er processeur, processeurs au milieu et dernier processeur). En revanche on n'a plus d'envoi inutiles et lors de l'annulation des plaques, une simple multiplication point par point de matrices suffit, sans se préoccuper de l'indexation.
+
+\section{Organisation du code}
+\label{organisation_du_code}
+\indent Le programme principal initial s'appelait "parrallele\_simple.f90". Nous avons modifié ce programme et créé les fichiers suivant :
+\begin{itemize}
+\item lire\_objet.f90 pour la lecture des plaques
+\item lire\_epsilon\_mu.f90 pour la modification de la nature du milieu
+\end{itemize}
+
+\indent Pour simplifier la compilation nous avons créé un makefile :
+\begin{code}{make}{}{}
+CC=mpif90
+CFLAG=
+SRC=lire_epsilon_mu.f90 lire_objet.f90 parallelesimple.f90
+OBJ= $(SRC:.f90=.o)
+EXEC=FDTD
+
+FDTD : $(OBJ)
+	$(CC) -o $@ $^
+%.o : %.f90
+	$(CC) -c $(CFLAG) $<
+
+clean :
+	rm *.o *.mod
+\end{code}
+
+Pour pouvoir exécuter le programme, il faut aussi avoir quelques fichiers d'entrée :
+\begin{itemize}
+\item donnees\_entree.dat (Exemple en annexe : \ref{subann:donneeentree}) contenant les données d'entrées :\\
+
+
+	\begin{itemize}
+	\item Le nombre d'itération (1ère ligne)
+	\item La taille du domaine, mise dans les variables Nx, Ny et Nz dans le programme principal (lignes 2 à 4)
+	\item Pas de discrétisation, mis dans les variables Lx, Ly et Lz dans le programme principal (lignes 5 à 7)
+	\item Portion de domaine de la sauvegarde, mis dans les variable x\_sauv\_min, x\_sauv\_max, y\_sauv\_min, y\_sauv\_max, z\_sauv\_min, z\_sauv\_max (lignes 8 à 13)
+	\item Champ choisi pour la sauvgarde. Valeur de 1 à 3 (x, y et z) pour le champs E et 4 à 6 (x, y et z) pour le champ H (ligne 14)\\
+	\end{itemize}
+	
+	
+\item pec\_pmc.txt (Exemple en annexe : \ref{subann:pecpmc}) contenant la définition des plaques. La première ligne défini le nombre de plaques et sur chaque lignes suivante on défini une plaque suivant la syntaxe suivante :\\
+
+
+\indent -type de plaque (0 pour du PEC et 1 pour du PMC);direction (1 pour x, 2 pour y et 3 pour z);coordonnee1 du 1er point;coordonnee2 du 1er point;coordonnee1 du 2ème point;coordonnee2 du 2ème point;cote;\\
+
+
+\item eps0.txt (Exemple en annexe : \ref{subann:eps0}) et mu0.txt (Exemple en annexe : \ref{subann:mu0}) contenant les paramètres pour la modification du milieu. La première ligne est réservée au nombre de zone de l'espace a définir. Ensuite chaque couple de ligne définit une zone de l'espace contenant un coefficient relatif au type de milieu à créer. Syntaxe :\\
+
+
+\indent -direction (1 pour x, 2 pour y et 3 pour z); coordonneex1; coordonneey1; coordonneez1; coordonneex2; coordonneey2; coordonneez2\\
+\indent -coefficient multiplicateur
+\end{itemize}
+
+
+\section{Conclusion de la partie 2}
+\indent Ces deux versions de parallélisation étaient nos idées de départ pour la parallélisation. Nous les avons programmées et testées et nous nous sommes rendus compte que des améliorations étaient possibles (Partie \ref{Optimisation}), notamment définir une topologie et réduire le nombre d'envois au début du programme.
+
+
+
+
+
+
+
+
+\newpage
+\partie{Optimisation}
+\label{Optimisation}
+\indent Une fois les deux premières versions implémentées, nous avons dû trouver une solution pour enregistrer les données sur toute une portion d'espace (Section : \ref{enregistrement_donnee}), ce qui n'était pas possible avant.\\
+\indent Nous avons aussi utilisé une topologie mpi et effectué des améliorations au début du programme pour réduire le nombre d'envois (Section : \ref{amelioration}).
+
+\section{Enregistrement des données}
+\label{enregistrement_donnee}
+\indent Il est simple de sauvegarder la valeur d'un champ en un point. Il suffit de trouver quel processeur effectue le calcul en ce point et lui demander d'écrire sa valeur dans un fichier à chaque itération. En revanche, sauvegarder la valeur d'un champ sur toute une portion de l'espace est plus compliquée car cela implique de nouvelles communications entre les processeurs et aussi un temps supplémentaire à l'exécution.\\
+
+\indent Il nous a donc fallu trouver une méthode simple et rapide à l'éxecution pour pouvoir permettre à l'utilisateur de sauvegarder des valeurs.\\
+\indent L'utilisateur commence par écrire dans un fichier, le fichier de données d'entrées les coordonnées des extrémités de la portion de l'espace qu'il souhaire sauvegarder et le type de champ qu'il souhaite.\\
+\indent Chaque processeur va ensuite créer une matrice temporaire (appelée "Mat" dans le programme) ou sauvegarder la valeur du champ désiré et l'envoyer à chaque itération au processeur 0. Le processeur 0 va reconstituer une matrice globale (appelée "Matglo" dans le programme)de tout le domaine, à l'aide de la routine mpi : "mpi\_gather", afin de pouvoir utiliser les coordonnées indiquées par l'utilisateur pour écrire dans un fichier texte.\\
+
+
+Voici le code réalisant l'écriture des résultats dans un fichier texte :
+\begin{code}{fortran}{}{}
+	do j=1,size(Mat,2)
+		do k=1,size(Mat,3)
+			call mpi_gather(Mat(1,j,k),size(Mat,1),mpi_double_precision,Matglo(1,j,k),size(Mat,1),mpi_double_precision,0,comm_1D,i_err)
+		end do
+	end do
+
+	if(i_proc == 0)then
+		write(1,*) Matglo(x_sauv_min:x_sauv_max,y_sauv_min:y_sauv_max,z_sauv_min:z_sauv_max)
+	endif
+\end{code}
+
+
+\indent L'inconvénient majeur de cette méthode est qu'elle nécessite l'envoi et la reconstitution, à chaque itération, de tout le domaine. L'avantage principal est qu'un processeur seulement écrit dans le fichier de sortie. En effet si plusieurs processeurs devaient écrire dans un fichier texte, ils devraient le faire chacun leur tour, dans un ordre prédéfini tout en faisant attention à ne pas réécrire par dessus ce que le processeur précédent a écrit. Cette méthode, simple à implémenter est aussi facile à comprendre pour une future modification du code.
+
+
+\section{Amélioration des performances}
+\label{amelioration}
+La solution développée dans la partie \ref{partie:programmation} a certains inconvénients comme le manque de clarté ou encore une certaine lenteur à l'exécution. De plus on ne peut sauvegarder les données qu'en un seul point. Dans cette section nous allons voir comment nous avons abordé ces différents problèmes.  
+\subsection{Topologie}
+	Une des premières améliorations possibles est d'utiliser la topologie générer par MPI. En effet MPI propose de gérer lui même la topologie des processeurs en créant un maillage cartésien. Utiliser la topologie MPI possède plusieurs avantages comme : possible amélioration du temps de communication entre les processeurs, améliore la lisibilité du code, simplification de mise en oeuvre. MPI propose plusieurs type de topologie : cartésienne (1D,2D,..) ou de graphe. Dans notre cas nous allons créer une topologie cartésienne 1D. La création du maillage se fait en deux étapes. Premièrement il faut créer un communicateur mpi regroupant les processeurs qui vont travailler sur ce maillage. Cela peut se faire par la méthode :
+\begin{code}{fortran}{}{}
+
+	! variable pour la definition d'un maillage virtuel
+	integer					:: comm_1D ! nouveau communicateur
+	integer, parameter 			:: ndims = 1 ! nombre de dimension du maillage
+	integer, dimension(ndims) 		:: dims ! nombre de proc dans toutes les directions
+	logical, dimension(ndims) 		:: periods ! maillage periodique
+	logical 				:: reorganisation ! conserver les rangs des processeurs d'origine
+
+	dims(1) = n_proc ! nombre de domaine de calcul
+	periods(:) = .false.
+	reorganisation = .true. ! reorganisation
+	! creation du maillage
+	call mpi_cart_create(mpi_comm_world ,ndims , dims ,periods,reorganisation , comm_1D,i_err)
+	
+\end{code}
+La deuxième étape est la définition des voisins. En dimension 1 on a seulement deux voisins mais la philosophie est la même pour un maillage en dimensions supérieures ou un graphe. Dans notre code nous avons défini les voisins droits et gauches par :
+\begin{code}{fortran}{}{}
+	integer					:: i_proc
+	integer					:: i_left, i_right
+	
+	! defintion du processeur droit et gauche
+	i_right = mpi_proc_null
+	i_left = mpi_proc_null
+  call mpi_cart_shift (comm_1D, 0, 1, i_left, i_right, i_err)
+\end{code}
+Cette méthode de maillage peut être très utile lorsque l'on passe aux dimensions supérieures elle peut simplifier les envois et les réceptions.
+\subsection{Lire objet}
+	Les méthodes développées dans la partie précédente, possèdent de nombreux inconvénients :
+\begin{itemize}
+\item la première approche est trop gourmande en mémoire et nécessite un envoi collectif de matrices de taille $ N_x\times N_y \times N_z $. Dans le cas de grands domaines la taille des buffers peut être insuffisante.
+\item la deuxième approche complique beaucoup le code, or notre projet étant amené à évoluer il est indispensable que le code soit le plus simple pour être repris plus facilement par d'autres. 
+\end{itemize}
+Il a donc été décidé de simplifier cette partie tant au niveau des performances mémoires que de la lisibilité du code. M. Pierre Bonnet nous a alors conseillé d'effectuer l'affectation les matrices de plaques directement dans le programme lire\_objet.f90. Comme on peut le voir sur l'algorithme de principe :
+\begin{algorithm}[H]
+\dontprintsemicolon
+\Entree{fic,i\_proc, ...}
+\Sortie{matrice de plaque sectionnée}
+\tcc{fic : nom du fichier contenant les plaques}
+\tcc{i\_proc : rang du processeur}
+lecture du nombre de plaque \;
+\For{chaque plaque du fichier}{
+	lire les paramètres correspondant dans le fichier \;
+	modifier les matrices de plaque en conséquence \;
+}
+sectionner les matrices les matrices en fonction du rang du processeur\;
+\caption{Lecture et parallélisation des plaques}
+\end{algorithm}
+On peut voir le code complet en annexe(voir annexe \ref{ann:lireobjet}).  Cette méthode cumule les avantages des deux premières approches. En effet lire\_objet.f90 est appelé par le programme principal parallele\_simple.f90 et donc il ne complexifie pas le code original. De plus sur chaque processeur on aura une matrice de plaque exactement de la bonne taille. On évite les problèmes de taille mémoire. Par contre l'inconvénient est que le fichier contenant les plaques doit être présent sur tous les processeurs.
+\subsection{Enregistrement des données}
+	Un des objectifs que nous a demandé notre tuteur de projet était l'enregistrement des résultats. Il faut alors laisser le choix a l'utilisateur de la zone de données à sauvegarder. Un des premiers problèmes qui est apparu pour enregistrer les données de sauvegarde est l'organisation en mémoire des données. En effet la zone de sauvegarde peut-être sur plusieurs processeurs, il faut donc rapatrier les données sur un seul processeurs. Une matrice 2D en fortran est stockée par colonne. Pour une matrice 3D la question est un peu plus délicate. Par exemple si l'on prend la matrice 3D $A = (a_{i,j,k})_{i=1,2 j=1,2 k=1,2}$ définie par:
+	\begin{displaymath}
+	A_1=(a_{i,j,1})=
+\left ( \begin{array} {cc}
+	1&3\\
+	2&4
+\end{array} \right )
+\end{displaymath}
+et
+\begin{displaymath}
+	A_2=(a_{i,j,2})=
+\left ( \begin{array} {cc}
+	5&7\\
+	6&8
+\end{array} \right )
+\end{displaymath}
+On a alors la représentation mémoire (voir tableau \ref{tab:memoire}).
+\begin{table}
+\centering{
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+1&2&3&4&5&6&7&8\\
+ \hline
+\end{tabular}
+}
+\caption{Représentation mémoire de la matrice $A$}
+\label{tab:memoire}
+\end{table}
+Lorsque que l'on rapatrie les données il faut prendre en compte cette structure de données. Pour rapatrier nous avons commencer par une méthode simple et lisible.
+Nous avons décidé de rapatrier toutes la matrice pour une composante du champ E ou H.Puis nous enregistrons la zone souhaité. On fait alors cela pour chaque itération. Lors du rapatriement il faut envoyer seulement les parties contigües en mémoire au processeur. On obtient alors l'algorithme d'envoi de données suivant:
+\begin{algorithm}[H]
+\dontprintsemicolon
+\tcc{Ny nombre de maille dans la direction (0y)}
+\tcc{Nz nombre de maille dans la direction (0z)}
+\tcc{Composante du champ que l'on souhaite sauvegarder}
+\For{ $j$ de $1$ à $N_y$}{
+	\For{ $k$ de $1$ à $N_z$}{
+		chaque processeur envoi au processeur 0 : C(1:m,i,j)\;
+		le processeur 0 recoie ses matrices \;
+	}
+}
+écriture des données voulues par le processeur 0 \;
+\caption{Envoi du domaine de calcul pour chaque processeur au processeur 0}
+\end{algorithm} 
+Ce qui correspond au code (Pour le cas du champ $E_x$) :
+\begin{code}{fortran}{}{}
+Mat=Ex(1:m,1:Ny+1,1:Nz+1)
+...
+do j=1,size(Mat,2)
+	do k=1,size(Mat,3)
+		call mpi_gather(Mat(1,j,k),size(Mat,1),mpi_double_precision,Matglo(1,j,k),size(Mat,1),mpi_double_precision,0,comm_1D,i_err)
+	end do
+end do
+\end{code}
+En fait cette version de l'enregistrement est trop lente a cause d'un nombre excessif de communication. En pratique les domaines de sauvegardes sont de petite taille. Il est donc nécessaire de réduire les données rapatriées à la zone de que l'on souhaite enregistrer. Lors de notre projet nous avons pu réduire les données rapatrié au données enregistrées seulement pour les axes $(Oy)$ et $(Oz)$.\\
+On a alors l'algorithme suivant :\\
+\begin{algorithm}[H]
+\dontprintsemicolon
+\tcc{$L_y$ nombre de maille que l'on souhaite envoyée dans la direction $(Oy)$}
+\tcc{$L_z$ nombre de maille que l'on souhaite envoyée dans la direction $(Oz)$}
+\tcc{Composante du champ que l'on souhaite sauvegarder}
+\For{ $j$ de $1$ à $L_y$}{
+	\For{ $k$ de $1$ à $L_z$}{
+		chaque processeur envoi au processeur 0 : C(1:m,i,j)\;
+		le processeur 0 reçoie ses matrices \;
+	}
+}
+écriture des données voulues par le processeur 0 \;
+\caption{Envoi du domaine de calcul pour chaque processeur au processeur 0 (version optimisée)}
+\end{algorithm}
+On a l'équivalent fortran :
+\begin{code}{fortran}{}{}
+real(kind = 8) :: y_sauv_min ! borne minimum selon (Oy)
+real(kind = 8) :: y_sauv_max ! borne maximum selon (Oy)
+real(kind = 8) :: z_sauv_min ! borne minimum selon (Oz)
+real(kind = 8) :: z_sauv_max ! borne maximum selon (Oz)
+Mat=Ex(1:m,1:y_sauv_max-y_sauv_min+1,1:z_sauv_max-z_sauv_min+1)
+...
+do j=1,size(Mat,2)
+	do k=1,size(Mat,3)
+		call mpi_gather(Mat(1,j,k),size(Mat,1),mpi_double_precision,Matglo(1,j,k),size(Mat,1),mpi_double_precision,0,comm_1D,i_err)
+	end do
+end do
+\end{code}
+Cette méthodes sera d'autant plus efficace que le domaine que l'on veut sauvegardé sera petit dans les directions $(Oz)$ et $(Oy)$. Une solution pour diminuer les envois dans la directions $(Ox)$  serait de créer un nouveau communicateur MPI regroupant les rangs des processeurs concerné par la sauvegarde.
+\section{Validation des résultats}
+
+\indent Pour valider notre programme, nous avons comparé nos résultats avec un code matlab initialement programmé. La source dans le code matlab est une onde plane se propageant dans un tube PEC/PMC.\\
+
+
+\indent Nous avons donc créé la même source et le même tube dans notre code fortran afin de voir si la propagation de l'onde est correcte. On a aussi regardé des points et vu si on avait des différences significatives dans les valeurs.
+
+\subsection{Propagation de l'onde}
+\indent D'après les propriété d'un tube PEC/PMC (figure \ref{propagation_0}) si on met une source dans un plan cela créé une onde plane. L'onde se propage sans perte des deux cotés du plan de source (figure \ref{propagation_1}). Lorsqu'elle atteint un bord, elle est réfléchie et inversée (figure \ref{propagation_2}). Les deux ondes réfléchies se croisent (figure \ref{propagation_3}) et continuent de se propager.\\
+
+
+\indent Les figures suivantes ont été créés à partir du code fortran. Nous avons écrit dans un fichier les valeurs obtenus par notre code parallèle dans tout un plan, sur 800 itérations. Nous l'avons affiché à l'aide de matlab de manière à pouvoir voir l'onde se propager.\\
+
+\begin{center}
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=1\textwidth]{propagation_0.png}\\
+\end{tabular}
+\caption{Vue de dessus d'un tube PEC/PMC d'axe x avec un plan de source orthogonal à x}
+\label{propagation_0}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=1\textwidth]{propagation_1.png}\\
+\end{tabular}
+\caption{Propagation de la source des deux cotés}
+\label{propagation_1}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=1\textwidth]{propagation_2.png}\\
+\end{tabular}
+\caption{Ondes après réflexion sur les bords}
+\label{propagation_2}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=1\textwidth]{propagation_3.png}\\
+\end{tabular}
+\caption{Ondes réfléchies après croisement}
+\label{propagation_3}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=1\textwidth]{gaussienne.png}\\
+\end{tabular}
+\caption{Courbe de propagation d'une onde plane au point de coordonnées (130,20,20)}
+\label{gaussienne}
+\end{figure}
+\end{center}
+
+\subsection{Comparaison des résultats avec le code matlab}
+En regardant la propagation de l'onde on remarque qu'elle se comporte comme nous l'attendions. Cependant il nous faut aussi vérifier que numériquement les résultats sont identiques au code matlab que nous avions précédemment programmé.
+
+Pour cela nous avons créé un petit script qui calcule la norme de la différence entre les valeurs du code matlab et les valeurs du code fortran au même endroit :
+\begin{code}{matlab}{}{}
+% Fichier ou sont les résultats obtenu avec le code matlab
+fic='resultat_matlab.txt';
+
+% Fichier ou sont les résultats obtenu avec le code fortran
+fic2='resultat_fortran.txt';
+
+% Lecture du fichier contenant les résultats obtenus avec le code matlab
+fid=fopen(fic);
+resultat = fscanf(fid,'%lf');
+fclose('all');
+
+% Lecture du fichier contenant les résultats obtenus avec le code fortran
+fid=fopen(fic2);
+resultat_2 = fscanf(fid,'%lf');
+fclose('all');
+
+% Affichage de la norme de la différence
+norm(resultat-result_2)
+\end{code}
+
+Voici les résultats obtenus sur un plan de taille $200*40$ sur 800 itérations :
+\begin{code}{matlab}{}{}
+>> test
+ans =
+  1.097913378419808e+002
+\end{code}
+
+\indent On a donc une erreur significative, et si l'on regarde la superposition en un point de la courbe obtenue en matlab et la courbe obtenue avec le code fortran (Figure : \ref{resultat_malab}) on remarque un décalage sur la première onde de retour. Ce décalage est présent uniquement sur la première onde de retour ce qui laisserait supposé qu'un côté du tube n'est pas exactement bien placé. Cela viendrai donc d'une plaque mal positionnée. Par manque de temps (programme long à l'exécution sans cluster), nous n'avons pas eu le temps de vérifier si cela venait du code matlab on du code fortran.
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=1\textwidth]{resultat_matlab.png}\\
+\end{tabular}
+\caption{Superposition des résultats fortran (rouge) et matlab (bleu) au point (130,20,20)}
+\label{resultat_malab}
+\end{figure}
+
+\section{Conclusion de la partie 3}
+\indent Nous avons réussi à sauvegarder des données, à améliorer notre code. Il y a un léger décalage dans les valeurs, probablement dû à une plaque mal positionnée.\\
+\indent Le problème initialement découpé suivant l'axe x aurait pu être amélioré en le découpant suivant l'axe z. En effet, l'organisation en mémoire d'une matrice en fortran fait que si le problème était découpé suivant l'axe z il serai plus simple de reconstituer une matrice découpé sur les différent processeurs. Chaque processeur pourrait alors écrire dans son propre fichier texte et en les concaténant on pourrait ainsi reconstituer un fichier global.\\
+\indent Cela nous est apparu trop tard pour que nous puissions faire les modifications nécessaires. Ce serait une modification importante sur l'ensemble du programme mais pourrait faire gagner beaucoup de temps.
+
+\newpage
+\conclusion
+Nous avons ajouter au programme initial la possibilité pour un utilisateur, de mettre des plaques à l'intérieur d'une cavité vide et de pouvoir modifier le milieu ambiant. Les objectifs initiaux ont donc été rempli.\\
+Les résultats que nous obtenons sont correct en termes de calcul malgré un léger décalage avec le code matlab que nous avons implémenté. En revanche nous n'avons pas de résultat en terme de temps de calcul car nous n'avons pas réussi à avoir un accès à un cluster.\\
+Nous n'avons malheureusement pas eu le temps d'implémenter toutes nos idées, notamment l'utilisation de type mpi pour la sauvegarde des résultats ou le découpage du problème suivant l'axe z.
+
+\newpage
+{\small
+\begin{thebibliography}{99}
+\bibitem{1}
+K.S. Yee, AP-14, pp.302-307, 1966\\
+EMC Zürich 2005\\
+LASMEA UMR 6602/CNRS\\
+
+\bibitem{2}
+J. Chergui, I. Dupays, D. Girou et coll\\
+\emph{MPI-1 - Version 2.24}\\
+http://www.idris.fr/data/cours/parallel/mpi/mpi1\_cours\_couleurs.pdf\\
+
+\bibitem{3}
+Pierre-Henri  Bussière, Mikaël  Picard\\
+\emph{Optimistion des simulations des en électromagnétisme}\\
+ISIMA, Mars 2006\\
+\end{thebibliography}
+}
+
+
+\newpage
+\Annexes
+\annexe{Elements de code}
+\subannexe{Lire objet}
+\label{ann:lireobjet}
+\lstinputlisting{./code/lire_objet.f90}
+\subannexe{Visualisation des objtes}
+\label{subann:visualize}
+\begin{code}{matlab}{}{}
+function visualize(fic)
+
+% Openning the text file file
+fid=fopen(fic);
+
+% Reading the text file
+[A, m] = fscanf(fid,'%d');
+
+% Close the text file
+fclose('all');
+
+% Allocation of the matrixes : 4 points and m/7 plates 
+X = zeros(4,m/7);
+Y = zeros(4,m/7);
+Z = zeros(4,m/7);
+tcolor=zeros(m/7,4);
+
+% For each plate
+for i=1:7:m
+    % Switch regarding of the orientation of the plate
+    switch A(i+1,1)
+        case 1        % x
+            X(1,round(i/7)+1)=A(i+6);
+            X(2,round(i/7)+1)=A(i+6);
+            X(3,round(i/7)+1)=A(i+6);
+            X(4,round(i/7)+1)=A(i+6);
+
+            Y(1,round(i/7)+1)=A(i+2);
+            Y(2,round(i/7)+1)=A(i+4);
+            Y(3,round(i/7)+1)=A(i+4);
+            Y(4,round(i/7)+1)=A(i+2);
+
+            Z(1,round(i/7)+1)=A(i+3);
+            Z(2,round(i/7)+1)=A(i+3);
+            Z(3,round(i/7)+1)=A(i+5);
+            Z(4,round(i/7)+1)=A(i+5);
+            
+        case 2        % y
+            X(1,round(i/7)+1)=A(i+4);
+            X(2,round(i/7)+1)=A(i+4);
+            X(3,round(i/7)+1)=A(i+2);
+            X(4,round(i/7)+1)=A(i+2);
+
+            Y(1,round(i/7)+1)=A(i+6);
+            Y(2,round(i/7)+1)=A(i+6);
+            Y(3,round(i/7)+1)=A(i+6);
+            Y(4,round(i/7)+1)=A(i+6);
+
+            Z(1,round(i/7)+1)=A(i+3);
+            Z(2,round(i/7)+1)=A(i+5);
+            Z(3,round(i/7)+1)=A(i+5);
+            Z(4,round(i/7)+1)=A(i+3);
+            
+        case 3        % z
+            X(1,round(i/7)+1)=A(i+2);
+            X(2,round(i/7)+1)=A(i+4);
+            X(3,round(i/7)+1)=A(i+4);
+            X(4,round(i/7)+1)=A(i+2);
+
+            Y(1,round(i/7)+1)=A(i+3);
+            Y(2,round(i/7)+1)=A(i+3);
+            Y(3,round(i/7)+1)=A(i+5);
+            Y(4,round(i/7)+1)=A(i+5);
+
+            Z(1,round(i/7)+1)=A(i+6);
+            Z(2,round(i/7)+1)=A(i+6);
+            Z(3,round(i/7)+1)=A(i+6);
+            Z(4,round(i/7)+1)=A(i+6);    
+    end
+
+    switch(A(i))
+        case 0 % metal
+            tcolor(round(i/7)+1,:)=[0.5 0.5 0.5 0.5];
+        case 1 % PEC
+            tcolor(round(i/7)+1,:)=[1 1 1 1];
+    end
+end
+
+
+% Visualization
+figure(1);
+axis square;
+patch(X,Y,Z,tcolor');
+xlabel('x');
+ylabel('y');
+zlabel('z');
+title(' Visualisation de l objet (en bleu PEC, en rouge PMC)');
+end
+
+\end{code}
+
+
+\annexe{Exemple de fichier d'entrée}
+\subannexe{donnees\_entree.dat}
+\label{subann:donneeentree}
+\begin{code}{}{}{}
+800
+200
+40
+40
+5.00
+1.00
+1.00
+15
+104
+32
+32
+33
+33
+1
+\end{code}
+
+\subannexe{pec\_pmc.txt}
+\label{subann:pecpmc}
+\begin{code}{}{}{}
+6
+0	1	10	10	30	30	10
+0	1	10	10	30	30	200
+0	2	10	10	200	30	10
+0	2	10	10	200	30	30
+1	3	10	10	200	30	10
+1	3	10	10	200	30	30
+\end{code}
+
+\subannexe{eps0.txt}
+\label{subann:eps0}
+\begin{code}{}{}{}
+3
+1	1	1	1	200	40	40
+5.d-1
+
+2	1	1	1	200	40	40
+5.d-1
+
+3	1	1	1	200	40	40
+5.d-1
+\end{code}
+
+\subannexe{mu0.txt}
+\label{subann:mu0}
+\begin{code}{}{}{}
+3
+1	1	1	1	200	40	40
+2.d-1
+
+2	1	1	1	200	40	40
+2.d-1
+
+3	1	1	1	200	40	40
+2.d-1
+\end{code}
+\end{document}
