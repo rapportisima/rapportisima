@@ -22,6 +22,8 @@
 \newif\if@notables \@notablesfalse
 \newif\if@fusionfigtab \@fusionfigtabfalse
 \newif\if@partiebigpage \@partiebigpagefalse
+\newif\if@english \@englishtrue
+\newif\if@french \@frenchtrue
 \DeclareOption{doubletome}{ \@doubletometrue } %permet d'avoir deux tomes dont un d'annexes
 \DeclareOption{logoentete}{ \@logoentetetrue } %permet d'avoir les logos dans l'entete
 \DeclareOption{lmodern}{ \@vectorieltrue}  %permet d'avoir des polices vectorielles
@@ -32,6 +34,8 @@
 \DeclareOption{notables}{ \@notablestrue }    %pas de liste des tables
 \DeclareOption{fusionfigtab}{ \@fusionfigtabtrue \@nofigurestrue \@notablestrue}    %liste des tables et des figures sur une page
 \DeclareOption{partiebigpage}{ \@partiebigpagetrue } %titre de la partie sur un page
+\DeclareOption{english}{\@englishtrue} % permet d'obtenir la traduction en anglais des partie introduction ...
+\DeclareOption{french}{\@englishfalse} % permet d'obtenir la version francaise
 \ProcessOptions
 
 %%%%%%%%%%%%%%%%%%inclusion des packages necessaires%%%%%%%%%%%%%%%%%%%%%%%
@@ -65,7 +69,25 @@
 \setlength{\footskip}{27pt} 	    % Bas de page + séparation
 \setlength{\textheight}{28cm}   % Hauteur de la zone de texte
 
-\selectlanguage{french}  %selection de la langue francaise pour les tables
+\newcommand{\@Remerciements}{Remerciements}
+\newcommand{\@ReferencesBiblio}{R\'ef\'erences Bibliographiques}
+\newcommand{\@Glossaire}{Remerciements}
+\newcommand{\@abrevlist}{Liste des abréviations}
+\newcommand{\@redacteur}{Pr\'esent\'e par}
+
+\iflanguage{english}
+{
+	\selectlanguage{english}
+	\renewcommand{\@Remerciements}{Thanks}
+	\renewcommand{\@ReferencesBiblio}{Bibliographics References}
+	\renewcommand{\@Glossaire}{Glossary}
+	\renewcommand{\@abrevlist}{List of abbreviation}
+	\renewcommand{\@redacteur}{Presented by}
+}
+{
+	\selectlanguage{french}
+}
+  %selection de la langue francaise pour les tables
 
 %----------------------
 % Definitions gloables     
@@ -150,8 +172,12 @@
 \gdef\respf#1#2{ \gdef\@respf{#1 & #2 \\ } }
 
 %rédacteur et date
-\gdef\@presentepar{}
-\gdef\presentepar#1{\gdef\@presentepar{Pr\'esent\'e par : #1 \\}}
+\gdef\@presentepara{}
+\gdef\presentepara#1{\gdef\@presentepara{\@redacteur : #1 \\}}
+\gdef\@presenteparb{}
+\gdef\presenteparb#1{\gdef\@presenteparb{\@redacteur : #1 \\}}
+\gdef\@presenteparc{}
+\gdef\presenteparc#1{\gdef\@presenteparc{\@redacteur : #1 \\}}
 \gdef\@duree{}
 \gdef\duree#1{\gdef\@duree{#1}}
 \gdef\@years{}
@@ -172,7 +198,7 @@
   \gdef\@thanks
   {%
   	\newpage%
-		\subsection*{\LARGE{\sc{Remerciements}}} \vskip 12pt%
+		\subsection*{\LARGE{\sc{\@Remerciements}}} \vskip 12pt%
 		\addtocontents{toc}{\protect\contentsline{section}{\sc Remerciements}{}{}}#1%
   }
 }
@@ -196,8 +222,8 @@
   \gdef\@glossaire
   {%
 		\newpage%
-		\subsection*{\LARGE{\sc{Glossaire}}} \vskip 12pt%
-    \addtocontents{toc}{\protect\contentsline{section}{\sc Glossaire}{}{}}#1%
+		\subsection*{\LARGE{\sc{\@Glossaire}}} \vskip 12pt%
+    \addtocontents{toc}{\protect\contentsline{section}{\sc \@Glossaire}{}{}}#1%
   }
 }
 
@@ -208,8 +234,8 @@
   \gdef\@abrev
   {%
 		\newpage%
-		\subsection*{\LARGE{\sc{Liste des abréviations}}} \vskip 12pt%
-    \addtocontents{toc}{\protect\contentsline{section}{\sc Liste des abréviations}{}{}}#1%
+		\subsection*{\LARGE{\sc{\@abrevlist}}} \vskip 12pt%
+    \addtocontents{toc}{\protect\contentsline{section}{\sc \@abrevlist}{}{}}#1%
   }
 }
 
@@ -334,7 +360,9 @@
       \@espacedate
       %bolc date + "presente par"(optionnel)
       \begin{tabular}[t]{p{\@sizeofpresent}}
-      \@presentepar
+      \@presentepara
+      \@presenteparb
+      \@presenteparc
       \@years \\
       \@duree
       \end{tabular}
@@ -455,7 +483,7 @@
 \newcommand{\makebeginning}[1][A]
 {
     \pagestyle{fancy}        % pour avoir l'entete et le pied de page
-		\selectlanguage{french}  % pour avoir les titres en francais
+		%\selectlanguage{french}  % pour avoir les titres en francais
 
 		%entete
 		\if@logoentete
